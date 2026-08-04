@@ -1,5 +1,6 @@
 #include "http_server.h"
 #include "api_config.h"
+#include "api_system.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/http/service.h> // Official Zephyr 4.4 HTTP Service header
@@ -77,6 +78,10 @@ HTTP_RESOURCE_DEFINE(schedules_api_base_resource, tv_scheduler,
 HTTP_RESOURCE_DEFINE(schedules_api_wildcard_resource, tv_scheduler,
                      "/api/schedules/*", &api_schedules_wildcard_detail);
 
+// reset endpoint
+HTTP_RESOURCE_DEFINE(system_api_resource, tv_scheduler, "/api/system/reset",
+                     &api_system_reset_detail);
+
 // --- Public Start Function ---
 int http_server_start_serving(void) {
   LOG_INF("Starting HTTP server on port %u...", http_port);
@@ -113,3 +118,4 @@ int http_server_start_serving(void) {
           HTTP_SERVER_START_RETRIES);
   return ret;
 }
+

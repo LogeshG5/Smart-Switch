@@ -55,6 +55,31 @@
             font-size: 1.25rem;
         }
 
+        .card-danger {
+            border-color: var(--error-color);
+        }
+
+        .card-danger h2 {
+            color: var(--error-color);
+        }
+
+        .button-danger {
+            width: 100%;
+            max-width: 350px;
+            padding: 0.8rem 1rem;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #fff;
+            background-color: var(--error-color);
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .button-danger:hover {
+            background-color: #c9302c;
+        }
+
         hr {
             border: none;
             border-top: 2px solid var(--border-color);
@@ -290,6 +315,15 @@
                 <!-- Container for the list of existing schedules -->
                 <div id="schedule-list-container">
                     <p>Loading schedules...</p>
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="card card-danger">
+                <h2>Device Actions</h2>
+                <p>Be careful, these actions are immediate and cannot be undone.</p>
+                <div class="footer-group">
+                    <button id="reboot-button" class="button-danger">Reboot Device</button>
                 </div>
             </div>
         </main>
