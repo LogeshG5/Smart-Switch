@@ -1,5 +1,6 @@
 #include "http_server.h"
 #include "api_config.h"
+#include "api_ota.h"
 #include "api_system.h"
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -78,9 +79,17 @@ HTTP_RESOURCE_DEFINE(schedules_api_base_resource, tv_scheduler,
 HTTP_RESOURCE_DEFINE(schedules_api_wildcard_resource, tv_scheduler,
                      "/api/schedules/*", &api_schedules_wildcard_detail);
 
-// reset endpoint
+// Register the reset endpoint
 HTTP_RESOURCE_DEFINE(system_api_resource, tv_scheduler, "/api/system/reset",
                      &api_system_reset_detail);
+
+// Register the three OTA progress endpoints:
+HTTP_RESOURCE_DEFINE(ota_start_api_res, tv_scheduler, "/api/ota/start",
+                     &api_ota_start_detail);
+HTTP_RESOURCE_DEFINE(ota_upload_api_res, tv_scheduler, "/api/ota/upload",
+                     &api_ota_upload_detail);
+HTTP_RESOURCE_DEFINE(ota_finish_api_res, tv_scheduler, "/api/ota/finish",
+                     &api_ota_finish_detail);
 
 // --- Public Start Function ---
 int http_server_start_serving(void) {

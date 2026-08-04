@@ -318,6 +318,25 @@
                 </div>
             </div>
 
+            <!-- Update Management -->
+            <div class="card">
+                <h2>Firmware Update (OTA)</h2>
+                <p>Select a signed <code>zephyr.signed.bin</code> file to upload to the device.</p>
+                
+                <div class="file-upload-group">
+                    <input type="file" id="ota-file-input" accept=".bin" />
+                    <button id="ota-upload-btn" class="button-primary" style="margin-top: 10px;">Upload & Flash</button>
+                </div>
+                
+                <!-- Progress Indicator -->
+                <div id="ota-progress-container" style="display: none; margin-top: 15px;">
+                    <label>Uploading: <span id="ota-progress-text">0%</span></label>
+                    <div style="background-color: var(--border-color); border-radius: 4px; height: 10px; overflow: hidden;">
+                        <div id="ota-progress-bar" style="background-color: var(--accent-color); width: 0%; height: 100%; transition: width 0.1s;"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Reset Button -->
             <!-- Reset Button -->
             <div class="card card-danger">
                 <h2>Device Actions</h2>
@@ -490,6 +509,88 @@
 
                 return { load, renderForm };
             })();
+
+                // --- PART 4: OTA FIRMWARE UPLOAD ---
+                const otaFileInput = document.getElementById("ota-file-input");
+                const otaUploadBtn = document.getElementById("ota-upload-btn");
+                const otaProgressContainer = document.getElementById("ota-progress-container");
+                const otaProgressBar = document.getElementById("ota-progress-bar");
+                const otaProgressText = document.getElementById("ota-progress-text");
+                
+                const handleOtaUpload = async () => {
+                    const file = otaFileInput.files[0];
+                    if (!file) {
+                        alert("Please select a valid .bin firmware file first!");
+                        return;
+                    }
+                
+                    if (!confirm(`Are you sure you want to flash "${file.name}" (${(file.size / 1024).toFixed(1)} KB)?`)) {
+                        return;
+                    }
+                
+                    otaUploadBtn.disabled = true;
+                    otaFileInput.disabled = true;
+                    otaProgressContainer.style.display = "block";
+                    setStatus("Preparing OTA stream...", false);
+                
+                    const reader = new FileReader();
+                    reader.onload = async (e) => {
+                        const arrayBuffer = e.target.result;
+                        const totalSize = arrayBuffer.byteLength;
+                        const chunkSize = 1024; // Stream in 1KB chunks to match ESP32/MCU buffer
+                        let offset = 0;
+                
+                        try {
+                            // 1. Initialize the OTA upload session
+                            let initResponse = await fetch("/api/ota/start", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ size: totalSize })
+                            });
+                            if (!initResponse.ok) throw new Error("Could not initialize OTA session.");
+                
+                            // 2. Stream chunks sequentially
+                            while (offset < totalSize) {
+                                const chunk = arrayBuffer.slice(offset, offset + chunkSize);
+                                
+                                let uploadResponse = await fetch("/api/ota/upload", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/octet-stream" },
+                                    body: chunk
+                                });
+                
+                                if (!uploadResponse.ok) throw new Error(`Upload failed at offset ${offset}`);
+                
+                                offset += chunk.byteLength;
+                                
+                                // Update Progress bar
+                                const percent = Math.round((offset / totalSize) * 100);
+                                otaProgressBar.style.width = `${percent}%`;
+                                otaProgressText.textContent = `${percent}%`;
+                            }
+                
+                            // 3. Finalize & Flag for Reboot
+                            setStatus("Flash complete! Validating image... Device will reboot automatically in 3 seconds.", false);
+                            await fetch("/api/ota/finish", { method: "POST" });
+                            
+                            setTimeout(() => {
+                                window.location.reload();
+                          }, 5000);
+              
+                      } catch (err) {
+                          setStatus(`OTA Failed: ${err.message}`, true);
+                          otaUploadBtn.disabled = false;
+                          otaFileInput.disabled = false;
+                      }
+                  };
+              
+                  reader.readAsArrayBuffer(file);
+              };
+              
+            if (otaUploadBtn) {
+                otaUploadBtn.addEventListener("click", handleOtaUpload);
+            }
+
 
             // --- INITIALIZATION ---
             saveSettingsBtn.addEventListener('click', deviceSettingsModule.save);
