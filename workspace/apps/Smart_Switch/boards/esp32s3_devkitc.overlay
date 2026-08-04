@@ -1,0 +1,29 @@
+/ {
+    aliases {
+        tvrelay = &led0;
+
+        /* Map the boot button to the standard 'sw0' alias */
+        /* Most boards with a "BOOT" button use GPIO0 */
+        /* boot-button = &gpio0; */
+        /* sw0 = &boot_button_node; */
+/* Direct the standard alias to your board's built-in button_0 */
+        sw0 = &button0;
+    };
+
+    leds {
+        compatible = "gpio-leds";
+        led0: user_led  {
+            gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+        };
+    };
+
+    gpio_keys {
+        boot_button_node: button_0 {
+            gpios = <&gpio0 0 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+            label = "Boot button";
+        };
+    };
+};
+&wifi {
+	status = "okay";
+};

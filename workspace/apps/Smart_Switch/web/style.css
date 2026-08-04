@@ -1,0 +1,202 @@
+:root {
+  /* Variables remain the same */
+  --bg-color: #f4f7f6;
+  --card-bg: #ffffff;
+  --primary-text: #333;
+  --secondary-text: #666;
+  --accent-color: #007bff;
+  --border-color: #e0e0e0;
+  --error-color: #d9534f;
+  --success-color: #5cb85c;
+}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background-color: var(--bg-color);
+  color: var(--primary-text);
+}
+.container {
+  padding: 1rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.card {
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--border-color);
+}
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+hr {
+  border: none;
+  border-top: 2px solid var(--border-color);
+  margin: 2rem 0;
+}
+.footer-group {
+  text-align: center;
+  margin-top: -1rem;
+  margin-bottom: 2rem;
+}
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="time"] {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  box-sizing: border-box;
+}
+label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+#status {
+  font-weight: bold;
+  min-height: 1.2em;
+}
+#status.success {
+  color: var(--success-color);
+}
+#status.error {
+  color: var(--error-color);
+}
+
+/* --- Button Styles --- */
+button {
+  cursor: pointer;
+}
+#save-settings-button {
+  width: 100%;
+  max-width: 350px;
+  padding: 0.8rem 1rem;
+  font-size: 1.1rem;
+  font-weight: bold;
+  color: #fff;
+  background-color: var(--accent-color);
+  border: none;
+  border-radius: 4px;
+}
+.outline-button {
+  padding: 0.2rem 0.6rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--accent-color);
+  background-color: transparent;
+  border: 2px solid var(--accent-color);
+  border-radius: 50%;
+  line-height: 1;
+}
+.outline-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.button-group {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.button-group button {
+  flex-grow: 1;
+  padding: 0.7rem;
+  border-radius: 4px;
+  border: 1px solid;
+  font-weight: bold;
+}
+.button-primary {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+.button-secondary {
+  background-color: transparent;
+  color: var(--primary-text);
+  border-color: var(--secondary-text);
+}
+.action-btn {
+  background: none;
+  border: none;
+  padding: 0.5rem;
+}
+.action-btn.edit {
+  color: var(--accent-color);
+}
+.action-btn.remove {
+  color: var(--error-color);
+}
+.action-btn:hover {
+  opacity: 0.7;
+}
+
+/* --- Schedule Specific --- */
+.schedule-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--border-color);
+}
+.schedule-item:last-child {
+  border-bottom: none;
+}
+.schedule-info p {
+  margin: 0;
+  color: var(--secondary-text);
+}
+.schedule-info p strong {
+  color: var(--primary-text);
+}
+.schedule-form {
+  border: 2px solid var(--accent-color);
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+.day-selector {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin-bottom: 1rem;
+}
+.day-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  user-select: none;
+}
+.day-toggle.active {
+  background-color: var(--accent-color);
+  color: #fff;
+  border-color: var(--accent-color);
+}
+.day-toggle small {
+  margin: 0;
+  font-size: 0.7rem;
+}
+.time-row {
+  display: flex;
+  gap: 1rem;
+}
+.time-row div {
+  flex: 1;
+}

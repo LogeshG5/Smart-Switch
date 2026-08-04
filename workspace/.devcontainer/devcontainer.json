@@ -1,0 +1,13 @@
+{
+    "name": "Zephyr ESP32 Development Environment",
+    "image": "env-zephyr-espressif",
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.hexeditor"
+            ]
+        }
+    }
+}
