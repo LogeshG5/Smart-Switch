@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zephyr/data/json.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/net/http/server.h>
@@ -23,36 +24,35 @@ static char schedules_rx_buffer[SCHEDULES_RX_BUF_SIZE];
 static size_t schedules_rx_length;
 static char schedules_tx_buffer[SCHEDULES_TX_BUF_SIZE];
 
-// --- JSON Parsing Helpers (Unchanged, but now used with isolated buffers) ---
-static bool json_get_string(const char *json, const char *key, char *out,
-                            size_t out_len) {
-  char pattern[64];
-  snprintf(pattern, sizeof(pattern), "\"%s\":\"", key);
-  char *start = strstr(json, pattern);
-  if (!start)
-    return false;
-  start += strlen(pattern);
-  char *end = strchr(start, '"');
-  if (!end)
-    return false;
-  size_t length = end - start;
-  if (length >= out_len)
-    length = out_len - 1;
-  memcpy(out, start, length);
-  out[length] = '\0';
-  return true;
-}
+// ===================================================================================
+// JSON Descriptors - The "Map" between JSON and C Structs
+// ===================================================================================
 
-static bool json_get_int(const char *json, const char *key, int *value) {
-  char pattern[64];
-  snprintf(pattern, sizeof(pattern), "\"%s\":", key);
-  char *p = strstr(json, pattern);
-  if (!p)
-    return false;
-  p += strlen(pattern);
-  *value = atoi(p);
-  return true;
-}
+/**
+ * @brief Descriptor for the fields in the /api/settings POST payload.
+ * This maps JSON keys to the fields in the app_config_t struct.
+ */
+static const struct json_obj_descr settings_descr[] = {
+    JSON_OBJ_DESCR_PRIM(app_config_t, name, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(app_config_t, wifi_ssid, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(app_config_t, wifi_password, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(app_config_t, timezone, JSON_TOK_STRING),
+    JSON_OBJ_DESCR_PRIM(app_config_t, max_on_time_minutes, JSON_TOK_NUMBER),
+};
+
+/**
+ * @brief Descriptor for a single schedule object.
+ * This maps JSON keys to the fields in the schedule_t struct.
+ */
+static const struct json_obj_descr schedule_descr[] = {
+    JSON_OBJ_DESCR_PRIM(schedule_t, enabled,
+                        JSON_TOK_TRUE), // Also handles 'false'
+    JSON_OBJ_DESCR_PRIM(schedule_t, day_mask, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(schedule_t, start_hour, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(schedule_t, start_minute, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(schedule_t, end_hour, JSON_TOK_NUMBER),
+    JSON_OBJ_DESCR_PRIM(schedule_t, end_minute, JSON_TOK_NUMBER),
+};
 
 // ===================================================================================
 // PART 1: /api/settings IMPLEMENTATION
@@ -78,23 +78,39 @@ static int api_settings_get(struct http_response_ctx *response_ctx) {
   return 0;
 }
 
+/**
+ * @brief Handles POST /api/settings using the Zephyr JSON library.
+ */
 static int api_settings_post(struct http_response_ctx *response_ctx) {
-  app_config_t *config = config_get_editable();
-  int val;
-  LOG_DBG("POST settings payload: %s", settings_rx_buffer);
+  app_config_t *target_config = config_get_editable();
+  app_config_t parsed_config = {0}; // Temporary struct to parse into
 
-  config->version = CONFIG_VERSION;
-  json_get_string(settings_rx_buffer, "name", config->name,
-                  sizeof(config->name));
-  json_get_string(settings_rx_buffer, "wifi_ssid", config->wifi_ssid,
-                  sizeof(config->wifi_ssid));
-  json_get_string(settings_rx_buffer, "wifi_password", config->wifi_password,
-                  sizeof(config->wifi_password));
-  json_get_string(settings_rx_buffer, "timezone", config->timezone,
-                  sizeof(config->timezone));
-  if (json_get_int(settings_rx_buffer, "max_on_time_minutes", &val)) {
-    config->max_on_time_minutes = (uint16_t)val;
+  // Use the Zephyr JSON parser
+  int ret =
+      json_obj_parse(settings_rx_buffer, settings_rx_length, settings_descr,
+                     ARRAY_SIZE(settings_descr), &parsed_config);
+
+  if (ret < 0) {
+    LOG_ERR("JSON parser error for settings: %d", ret);
+    response_ctx->status = 400; // Bad Request
+    return ret;
   }
+  if ((ret & (1 << 0)) == 0) { // Check if 'name' (first field) was parsed
+    LOG_WRN("Mandatory 'name' field missing from settings JSON.");
+    // Add more checks for other fields if needed
+  }
+
+  // Safely copy the parsed data into the main config struct
+  strncpy(target_config->name, parsed_config.name,
+          sizeof(target_config->name) - 1);
+  strncpy(target_config->wifi_ssid, parsed_config.wifi_ssid,
+          sizeof(target_config->wifi_ssid) - 1);
+  strncpy(target_config->wifi_password, parsed_config.wifi_password,
+          sizeof(target_config->wifi_password) - 1);
+  strncpy(target_config->timezone, parsed_config.timezone,
+          sizeof(target_config->timezone) - 1);
+  target_config->max_on_time_minutes = parsed_config.max_on_time_minutes;
+
   config_save();
   response_ctx->status = 200;
   return 0;
@@ -140,22 +156,20 @@ static int api_settings_callback(struct http_client_ctx *client,
 // PART 2: /api/schedules IMPLEMENTATION
 // ===================================================================================
 
-static void parse_schedule(const char *json, schedule_t *sched) {
-  int val;
-  if (strstr(json, "\"enabled\":true"))
-    sched->enabled = true;
-  else
-    sched->enabled = false;
-  if (json_get_int(json, "day_mask", &val))
-    sched->day_mask = (uint8_t)val;
-  if (json_get_int(json, "start_hour", &val))
-    sched->start_hour = (uint8_t)val;
-  if (json_get_int(json, "start_minute", &val))
-    sched->start_minute = (uint8_t)val;
-  if (json_get_int(json, "end_hour", &val))
-    sched->end_hour = (uint8_t)val;
-  if (json_get_int(json, "end_minute", &val))
-    sched->end_minute = (uint8_t)val;
+/**
+ * @brief Parses a single schedule object using the Zephyr JSON library.
+ */
+static int parse_schedule(const char *json, size_t len, schedule_t *sched) {
+  int ret = json_obj_parse((char *)json, len, schedule_descr,
+                           ARRAY_SIZE(schedule_descr), sched);
+
+  if (ret < 0) {
+    LOG_ERR("JSON parser error for schedule: %d", ret);
+    return ret;
+  }
+  // You can add more granular checks here if needed, e.g., checking the return
+  // bitmask
+  return 0; // Success
 }
 
 static int get_index_from_url(const char *url) {
@@ -205,8 +219,11 @@ static int api_schedules_post(struct http_response_ctx *response_ctx) {
     return 0;
   }
   LOG_DBG("POST schedules payload: %s", schedules_rx_buffer);
-  parse_schedule(schedules_rx_buffer,
-                 &config->schedules[config->schedule_count]);
+  if (parse_schedule(schedules_rx_buffer, schedules_rx_length,
+                     &config->schedules[config->schedule_count]) != 0) {
+    response_ctx->status = 400; // Bad Request from parser
+    return -EINVAL;
+  }
   config->schedule_count++;
   config_save();
   response_ctx->status = 201;
@@ -221,7 +238,11 @@ static int api_schedules_put(int index,
     return 0;
   }
   LOG_DBG("PUT schedule %d payload: %s", index, schedules_rx_buffer);
-  parse_schedule(schedules_rx_buffer, &config->schedules[index]);
+  if (parse_schedule(schedules_rx_buffer, schedules_rx_length,
+                     &config->schedules[index]) != 0) {
+    response_ctx->status = 400; // Bad Request from parser
+    return -EINVAL;
+  }
   config_save();
   response_ctx->status = 200;
   return 0;
