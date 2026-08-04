@@ -509,7 +509,30 @@
 
                 return { load, renderForm };
             })();
+                // --- PART 3: SYSTEM ACTIONS ---
+                const rebootBtn = document.getElementById("reboot-button");
 
+                const handleReboot = async () => {
+                    if (!confirm("Are you sure you want to reboot the device? Connection will be lost.")) {
+                        return;
+                    }
+
+                    setStatus("Sending reboot command...", false);
+                    try {
+                        const response = await fetch("/api/system/reset", { method: 'POST' });
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        
+                        setStatus("Reboot command accepted. The device is restarting...", false);
+                        rebootBtn.disabled = true;
+
+                    } catch (error) {
+                        setStatus(`Error sending reboot command: ${error.message}`, true);
+                    }
+                };
+
+                if (rebootBtn) {
+                    rebootBtn.addEventListener('click', handleReboot);
+                }
                 // --- PART 4: OTA FIRMWARE UPLOAD ---
                 const otaFileInput = document.getElementById("ota-file-input");
                 const otaUploadBtn = document.getElementById("ota-upload-btn");
