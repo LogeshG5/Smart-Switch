@@ -74,10 +74,10 @@ HTTP_RESOURCE_DEFINE(settings_api_resource, tv_scheduler, "/api/settings",
                      &api_settings_detail);
 
 // Schedules endpoints (GET all / POST new and PUT/DELETE wildcard)
+HTTP_RESOURCE_DEFINE(schedules_api_wildcard_resource, tv_scheduler,
+                     "/api/schedulesupd/*", &api_schedules_wildcard_detail);
 HTTP_RESOURCE_DEFINE(schedules_api_base_resource, tv_scheduler,
                      "/api/schedules", &api_schedules_detail);
-HTTP_RESOURCE_DEFINE(schedules_api_wildcard_resource, tv_scheduler,
-                     "/api/schedules/*", &api_schedules_wildcard_detail);
 
 // Register the reset endpoint
 HTTP_RESOURCE_DEFINE(system_api_resource, tv_scheduler, "/api/system/reset",

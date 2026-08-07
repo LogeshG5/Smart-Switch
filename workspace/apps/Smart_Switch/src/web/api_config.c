@@ -222,7 +222,7 @@ static int parse_schedule(const char *json, size_t len, schedule_t *sched) {
 }
 
 static int get_index_from_url(const char *url) {
-  const char *base = "/api/schedules/";
+  const char *base = "/api/schedulesupd/";
   if (strncmp(url, base, strlen(base)) != 0) {
     return -1;
   }

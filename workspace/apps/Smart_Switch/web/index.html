@@ -352,6 +352,7 @@
             // --- API ENDPOINTS ---
             const SETTINGS_API = "/api/settings";
             const SCHEDULES_API = "/api/schedules";
+            const SCHEDULES_UPD_API = "/api/schedulesupd";
 
             // --- DOM ELEMENTS ---
             const statusEl = document.getElementById("status");
@@ -486,7 +487,7 @@
                     const scheduleData = { enabled: true, day_mask: weekdaysToMask(weekdays), start_hour, start_minute, end_hour, end_minute };
 
                     try {
-                        const url = isEdit ? `${SCHEDULES_API}/${index}` : SCHEDULES_API;
+                        const url = isEdit ? `${SCHEDULES_UPD_API}/${index}` : SCHEDULES_API;
                         const method = isEdit ? 'PUT' : 'POST';
                         const response = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(scheduleData) });
                         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -500,7 +501,7 @@
                 const remove = async (index) => {
                     if (!confirm(`Are you sure you want to delete Schedule #${index + 1}?`)) return;
                     try {
-                        const response = await fetch(`${SCHEDULES_API}/${index}`, { method: 'DELETE' });
+                        const response = await fetch(`${SCHEDULES_UPD_API}/${index}`, { method: 'DELETE' });
                         if (!response.ok) throw new Error(`HTTP ${response.status}`);
                         setStatus(`Schedule #${index + 1} deleted.`, false);
                         await load();
