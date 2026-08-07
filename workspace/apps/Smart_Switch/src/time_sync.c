@@ -1,5 +1,7 @@
 #include "time_sync.h"
+#include "config.h"
 #include <errno.h>
+#include <stdlib.h>
 #include <time.h>
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h> // Include Zephyr's logging header
@@ -18,6 +20,17 @@ static const char *sntp_servers[] = {
     "time.google.com", // Primary
     "pool.ntp.org",    // Secondary
 };
+
+int update_system_timezone(const char *tz_string) {
+  // Set environmental timezone variable (e.g. "EST5EDT" or "IST-5:30")
+  setenv("TZ", tz_string, 1);
+
+  // Apply changes to POSIX time libraries
+  tzset();
+
+  LOG_INF("System timezone updated to: %s", tz_string);
+  return 0;
+}
 
 // --- Public API ---
 
@@ -52,6 +65,10 @@ int time_sync(void) {
                   errno);
           return ret; // This is a critical system error, no point in retrying
         }
+
+        const app_config_t *cfg = config_get();
+
+        update_system_timezone(cfg->timezone);
 
         LOG_INF("Time synchronized successfully via %s", server);
         return 0; // Exit function on first success
