@@ -24,7 +24,7 @@ static void run_station_mode(void);
 
 int main(void) {
   LOG_INF("\n=====================================");
-  LOG_INF("      TV Scheduler Starting");
+  LOG_INF("      TV Scheduler Starting v1.0");
   LOG_INF("=====================================");
 
   if (init_core_peripherals() != 0) {
@@ -68,7 +68,7 @@ static int init_core_peripherals(void) {
     return -EIO;
   }
   if (relay_set(false) != 0) {
-    LOG_ERR("Failed to set initial relay state to OFF.");
+    LOG_ERR("Failed to set initial relay state to ON.");
     return -EIO;
   }
   LOG_INF("Core peripherals initialized.");
@@ -115,9 +115,9 @@ static void run_station_mode(void) {
   LOG_INF("Starting main scheduler loop...");
   while (1) {
     bool should_block =
-        scheduler_should_block_any(cfg->schedules, cfg->schedule_count);
-    if (relay_set(should_block) == 0) {
-      LOG_INF("Relay state set to: %s", should_block ? "BLOCKED" : "ALLOWED");
+        !scheduler_should_block_any(cfg->schedules, cfg->schedule_count);
+    if (relay_set(!should_block) == 0) {
+      LOG_INF("Relay state set to: %s", !should_block ? "BLOCKED" : "ALLOWED");
     } else {
       LOG_ERR("Failed to set relay state!");
     }
