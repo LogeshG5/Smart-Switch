@@ -278,6 +278,21 @@
         </header>
 
         <main>
+
+            <!-- PART 2: SCHEDULE MANAGEMENT -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Blocker Schedules</h2>
+                    <button id="show-add-schedule-form-btn" class="outline-button" title="Add Schedule">+</button>
+                </div>
+                <!-- Container for the Add/Edit form -->
+                <div id="schedule-form-container"></div>
+                <!-- Container for the list of existing schedules -->
+                <div id="schedule-list-container">
+                    <p>Loading schedules...</p>
+                </div>
+            </div>
+
             <!-- PART 1: DEVICE SETTINGS -->
             <div class="card">
                 <h2>General</h2>
@@ -304,20 +319,6 @@
 
             <hr />
 
-            <!-- PART 2: SCHEDULE MANAGEMENT -->
-            <div class="card">
-                <div class="card-header">
-                    <h2>Schedules</h2>
-                    <button id="show-add-schedule-form-btn" class="outline-button" title="Add Schedule">+</button>
-                </div>
-                <!-- Container for the Add/Edit form -->
-                <div id="schedule-form-container"></div>
-                <!-- Container for the list of existing schedules -->
-                <div id="schedule-list-container">
-                    <p>Loading schedules...</p>
-                </div>
-            </div>
-
             <!-- Update Management -->
             <div class="card">
                 <h2>Firmware Update (OTA)</h2>
@@ -336,7 +337,7 @@
                     </div>
                 </div>
             </div>
-            <!-- Reset Button -->
+
             <!-- Reset Button -->
             <div class="card card-danger">
                 <h2>Device Actions</h2>
@@ -423,7 +424,15 @@
                     } catch (error) { setStatus(`Failed to load schedules: ${error.message}`, true); }
                 };
 
+                const format12Hr = (hour, minute) => {
+                  const period = hour >= 12 ? 'PM' : 'AM';
+                  const h12 = hour % 12 || 12; // Converts 0 to 12 for midnight, 13-23 to 1-11
+                  return `${String(h12).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${period}`;
+                };
+
                 const renderList = (schedules) => {
+                    // Helper function to format 24h hours/minutes to 12h format
+                    // <strong>${String(s.start_hour).padStart(2, '0')}:${String(s.start_minute).padStart(2, '0')} - ${String(s.end_hour).padStart(2, '0')}:${String(s.end_minute).padStart(2, '0')}</strong>
                     scheduleListContainer.innerHTML = "";
                     if (!schedules || schedules.length === 0) {
                         scheduleListContainer.innerHTML = "<p>No schedules defined.</p>";
@@ -435,8 +444,8 @@
                         item.className = "schedule-item";
                         item.innerHTML = `
                     <div class="schedule-info">
-                        <strong>${String(s.start_hour).padStart(2, '0')}:${String(s.start_minute).padStart(2, '0')} - ${String(s.end_hour).padStart(2, '0')}:${String(s.end_minute).padStart(2, '0')}</strong>
-                        <p>${weekdays.map((a, i) => a ? ['S', 'M', 'T', 'W', 'T', 'F', 'S'][i] : null).filter(Boolean).join(', ') || "Once"}</p>
+                        <strong>${format12Hr(s.start_hour, s.start_minute)} - ${format12Hr(s.end_hour, s.end_minute)}</strong>
+                        <p>${weekdays.map((a, i) => a ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][i] : null).filter(Boolean).join(', ') || "Once"}</p>
                     </div>
                     <button class="action-btn edit" data-index="${index}" title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                     <button class="action-btn remove" data-index="${index}" title="Remove"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
@@ -456,11 +465,11 @@
                 <div class="schedule-form">
                     <h3>${isEdit ? `Edit Schedule #${index + 1}` : 'Add New Schedule'}</h3>
                     <div class="day-selector">
-                        ${['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => `<div class="day-toggle ${weekdays[i] ? 'active' : ''}" data-day="${i}"><small>${day}</small></div>`).join('')}
+                        ${['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, i) => `<div class="day-toggle ${weekdays[i] ? 'active' : ''}" data-day="${i}"><small>${day}</small></div>`).join('')}
                     </div>
                     <div class="time-row">
-                        <div><label>Start</label><input type="time" class="schedule-start" value="${String(s.start_hour).padStart(2, '0')}:${String(s.start_minute).padStart(2, '0')}"></div>
-                        <div><label>End</label><input type="time" class="schedule-end" value="${String(s.end_hour).padStart(2, '0')}:${String(s.end_minute).padStart(2, '0')}"></div>
+                        <div><label>Start</label><input type="time" class="schedule-start" value="${format12Hr(s.start_hour, s.start_minute)}"></div>
+                        <div><label>End</label><input type="time" class="schedule-end" value="${format12Hr(s.end_hour, s.end_minute)}"></div>
                     </div>
                     <div class="button-group">
                         <button class="button-primary">${isEdit ? 'Update' : 'Save'}</button>
