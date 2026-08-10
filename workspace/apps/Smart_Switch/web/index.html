@@ -112,7 +112,6 @@
         }
 
         #status {
-            font-weight: bold;
             min-height: 1.2em;
         }
 
@@ -121,6 +120,16 @@
         }
 
         #status.error {
+            color: var(--error-color);
+        }
+
+        #device-state.success {
+            font-weight: bold;
+            color: var(--success-color);
+        }
+
+        #device-state.error {
+            font-weight: bold;
             color: var(--error-color);
         }
 
@@ -274,7 +283,8 @@
     <div class="container">
         <header>
             <h1>Smart Switch Settings</h1>
-            <p id="status">Loading configuration...</p>
+            <p id="status">Loading...</p>
+            <p id="device-state"></p>
         </header>
 
         <main>
@@ -351,12 +361,14 @@
     <script>
         document.addEventListener("DOMContentLoaded", () => {
             // --- API ENDPOINTS ---
+            const DEVICE_STATE_API = "/api/system/state";
             const SETTINGS_API = "/api/settings";
             const SCHEDULES_API = "/api/schedules";
             const SCHEDULES_UPD_API = "/api/schedulesupd";
 
             // --- DOM ELEMENTS ---
             const statusEl = document.getElementById("status");
+            const deviceStateEl = document.getElementById("device-state");
             // Settings elements
             const nameEl = document.getElementById("name");
             const ssidEl = document.getElementById("wifi_ssid");
@@ -374,6 +386,20 @@
                 statusEl.textContent = message;
                 statusEl.className = isError ? 'error' : 'success';
             };
+
+            const deviceStateModule = (() => {
+                const load = async () => {
+                    try {
+                        console.log(`Going to load state by calling ${DEVICE_STATE_API}`);
+                        const response = await fetch(DEVICE_STATE_API);
+                        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                        const res = await response.json();
+                        deviceStateEl.textContent = res.state ? "Device is Blocked" : "Device is Allowed";
+                        deviceStateEl.className = res.state ? "error" : "success";
+                    } catch (error) { setStatus(`Failed to load device state: ${error.message}`, true); }
+                };
+                return { load };
+            })();
 
             // --- PART 1: DEVICE SETTINGS ---
             const deviceSettingsModule = (() => {
@@ -432,7 +458,6 @@
 
                 const renderList = (schedules) => {
                     // Helper function to format 24h hours/minutes to 12h format
-                    // <strong>${String(s.start_hour).padStart(2, '0')}:${String(s.start_minute).padStart(2, '0')} - ${String(s.end_hour).padStart(2, '0')}:${String(s.end_minute).padStart(2, '0')}</strong>
                     scheduleListContainer.innerHTML = "";
                     if (!schedules || schedules.length === 0) {
                         scheduleListContainer.innerHTML = "<p>No schedules defined.</p>";
@@ -468,8 +493,8 @@
                         ${['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day, i) => `<div class="day-toggle ${weekdays[i] ? 'active' : ''}" data-day="${i}"><small>${day}</small></div>`).join('')}
                     </div>
                     <div class="time-row">
-                        <div><label>Start</label><input type="time" class="schedule-start" value="${format12Hr(s.start_hour, s.start_minute)}"></div>
-                        <div><label>End</label><input type="time" class="schedule-end" value="${format12Hr(s.end_hour, s.end_minute)}"></div>
+                        <div><label>Start</label><input type="time" class="schedule-start" value="${String(s.start_hour).padStart(2, '0')}:${String(s.start_minute).padStart(2, '0')}"></div>
+                        <div><label>End</label><input type="time" class="schedule-end" value="${String(s.end_hour).padStart(2, '0')}:${String(s.end_minute).padStart(2, '0')}"></div>
                     </div>
                     <div class="button-group">
                         <button class="button-primary">${isEdit ? 'Update' : 'Save'}</button>
@@ -631,7 +656,7 @@
 
             // Load all data on page start
             setStatus("Loading all configurations...", false);
-            Promise.all([scheduleModule.load(), deviceSettingsModule.load()]).then(() => {
+            Promise.all([scheduleModule.load(), deviceSettingsModule.load(), deviceStateModule.load()]).then(() => {
                 setStatus("Configuration loaded.", false);
             });
         });

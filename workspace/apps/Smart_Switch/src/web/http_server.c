@@ -83,6 +83,10 @@ HTTP_RESOURCE_DEFINE(schedules_api_base_resource, tv_scheduler,
 HTTP_RESOURCE_DEFINE(system_api_resource, tv_scheduler, "/api/system/reset",
                      &api_system_reset_detail);
 
+// Register the device state endpoint
+HTTP_RESOURCE_DEFINE(relay_state_api_resource, tv_scheduler,
+                     "/api/system/state", &api_relay_state);
+
 // Register the three OTA progress endpoints:
 HTTP_RESOURCE_DEFINE(ota_start_api_res, tv_scheduler, "/api/ota/start",
                      &api_ota_start_detail);

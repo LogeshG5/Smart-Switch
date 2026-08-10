@@ -5,5 +5,6 @@
 
 // Exposes the detail structure so http_server.c can reference it.
 extern struct http_resource_detail_dynamic api_system_reset_detail;
+extern struct http_resource_detail_dynamic api_relay_state;
 
 #endif /* API_SYSTEM_H */
