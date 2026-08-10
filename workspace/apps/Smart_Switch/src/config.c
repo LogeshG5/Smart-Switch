@@ -69,7 +69,7 @@ void config_factory_reset(void) {
   memset(&config, 0, sizeof(config));
   config.version = CONFIG_VERSION;
   strncpy(config.name, "My New IoT Device", sizeof(config.name) - 1);
-  strncpy(config.timezone, "UTC", sizeof(config.timezone) - 1);
+  strncpy(config.timezone, "IST-5:30", sizeof(config.timezone) - 1);
   config.max_on_time_minutes = 0;
   config.schedule_count = 1;
   schedule_t *schedule = &config.schedules[0];
