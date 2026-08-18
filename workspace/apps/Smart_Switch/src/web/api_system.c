@@ -1,5 +1,6 @@
 #include "api_system.h"
 #include "relay.h"
+#include "scheduler.h" // Owned by the central domain layer
 #include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,12 +19,6 @@ static size_t control_rx_length;
 
 #define RELAY_STATE_BUF_SIZE 128
 static char relay_state_buffer[RELAY_STATE_BUF_SIZE];
-
-// --- OVERRIDE STATE VARIABLES ---
-static bool override_active = false;
-static bool override_state =
-    false; // true = Block (Relay ON), false = Allow (Relay OFF)
-static int64_t temp_allow_expiry_ms = 0; // Expiry uptime stamp in milliseconds
 
 // --- JSON Parsing Intermediate Payload Struct ---
 struct control_payload {
@@ -47,42 +42,6 @@ static void reboot_timer_handler(struct k_timer *timer_id) {
 K_TIMER_DEFINE(reboot_timer, reboot_timer_handler, NULL);
 
 // ===================================================================================
-// PUBLIC API FOR SCHEDULER & MAIN INTEGRATION
-// ===================================================================================
-
-/**
-
-@brief Checks if a manual or temporary override is currently active.
-
-@param state Pointer to write the active override state to (true = Block, false
-= Allow).
-
-@return true if an override is active, false if the system should follow the
-normal scheduler.
-*/
-bool api_system_get_override(bool *state) {
-  if (temp_allow_expiry_ms > 0) {
-    if (k_uptime_get() < temp_allow_expiry_ms) {
-      *state = false; // Forced ALLOW state (Relay OFF)
-      return true;
-    } else {
-      // Temporary allow period has expired
-      LOG_INF("Temporary allow countdown has expired. Returning control to "
-              "scheduler.");
-      temp_allow_expiry_ms = 0;
-      override_active = false;
-    }
-  }
-
-  if (override_active) {
-    *state = override_state;
-    return true;
-  }
-
-  return false;
-}
-
-// ===================================================================================
 // API CALLBACKS
 // ===================================================================================
 
@@ -96,7 +55,6 @@ static int api_system_reset_callback(struct http_client_ctx *client,
       LOG_INF("Received request to reboot device.");
       response_ctx->status = 200;
       response_ctx->final_chunk = true;
-
       LOG_WRN("System will reboot in 1 second...");
       k_timer_start(&reboot_timer, K_SECONDS(1), K_NO_WAIT);
     } else {
@@ -134,12 +92,12 @@ static int api_relay_state_callback(struct http_client_ctx *client,
 }
 
 /**
-
-@brief Handles manual relay actions and temporary override durations safely.
-*/
+ * @brief Handles manual relay actions and temporary override durations safely.
+ *        This handler is completely stateless. It parses and forwards the
+ *        commands to the core Scheduler.
+ */
 static int api_system_control_post(struct http_response_ctx *response_ctx) {
   struct control_payload payload = {0};
-
   int ret = json_obj_parse(control_rx_buffer, control_rx_length, control_descr,
                            ARRAY_SIZE(control_descr), &payload);
   if (ret < 0) {
@@ -155,20 +113,15 @@ static int api_system_control_post(struct http_response_ctx *response_ctx) {
   }
 
   if (strcmp(payload.action, "on") == 0) {
-    // Manual Forced Block (Relay ON)
-    override_active = true;
-    override_state = true;
-    temp_allow_expiry_ms = 0; // Clear any active countdown timers
-    relay_set(true);          // Actuate GPIO output instantly
-    LOG_INF("Manual override activated: FORCED BLOCK (Relay ON).");
+    // Appliance ON -> Allowed (Relay OFF / Unblocked)
+    // Handled cleanly by the scheduler domain
+    scheduler_set_manual_override(false); // false = Allow (Relay OFF)
+    LOG_INF("Manual override request sent: FORCED ALLOW (Appliance ON).");
 
   } else if (strcmp(payload.action, "off") == 0) {
-    // Manual Forced Allow (Relay OFF)
-    override_active = true;
-    override_state = false;
-    temp_allow_expiry_ms = 0; // Clear any active countdown timers
-    relay_set(false);         // Actuate GPIO output instantly
-    LOG_INF("Manual override activated: FORCED ALLOW (Relay OFF).");
+    // Appliance OFF -> Blocked (Relay ON / Blocked)
+    scheduler_set_manual_override(true); // true = Block (Relay ON)
+    LOG_INF("Manual override request sent: FORCED BLOCK (Appliance OFF).");
 
   } else if (strcmp(payload.action, "temporary_allow") == 0) {
     if (payload.duration_minutes <= 0) {
@@ -177,20 +130,13 @@ static int api_system_control_post(struct http_response_ctx *response_ctx) {
       return -EINVAL;
     }
 
-    // Set the countdown uptime clock boundary
-    temp_allow_expiry_ms =
-        k_uptime_get() + (payload.duration_minutes * 60 * 1000);
-    override_active = true;
-    override_state = false;
-    relay_set(false); // Actuate GPIO output instantly to unblock appliance
-    LOG_INF("Temporary Allow activated for %d minute(s). Expiry at %lld ms.",
-            payload.duration_minutes, temp_allow_expiry_ms);
+    scheduler_set_temporary_allow(payload.duration_minutes);
+    LOG_INF("Temporary Allow command sent for %d minute(s).",
+            payload.duration_minutes);
 
   } else if (strcmp(payload.action, "auto") == 0) {
-    // Bonus action to release overrides back to scheduled rules
-    override_active = false;
-    temp_allow_expiry_ms = 0;
-    LOG_INF("All manual overrides cleared. System returned to auto schedule.");
+    scheduler_clear_override();
+    LOG_INF("Clear overrides command sent. System returning to auto schedule.");
 
   } else {
     LOG_ERR("Unsupported action parameter: %s", payload.action);

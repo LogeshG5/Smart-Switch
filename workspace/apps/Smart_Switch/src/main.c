@@ -115,13 +115,14 @@ static void run_station_mode(void) {
   LOG_INF("Starting main scheduler loop...");
   while (1) {
     bool should_block =
-        !scheduler_should_block_any(cfg->schedules, cfg->schedule_count);
+        !scheduler_evaluate_state(cfg->schedules, cfg->schedule_count);
     if (relay_set(!should_block) == 0) {
       LOG_INF("Relay state set to: %s", !should_block ? "BLOCKED" : "ALLOWED");
     } else {
       LOG_ERR("Failed to set relay state!");
     }
-    k_sleep(K_MINUTES(1));
+    scheduler_wait_for_next_evaluation(K_MINUTES(1));
+    // k_sleep(K_MINUTES(1));
   }
 }
 
