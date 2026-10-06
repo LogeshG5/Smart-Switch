@@ -18,6 +18,7 @@ LOG_MODULE_REGISTER(wifi_manager, CONFIG_LOG_DEFAULT_LEVEL);
 #define AP_IP_ADDRESS "192.168.4.1"
 #define AP_NETMASK "255.255.255.0"
 #define AP_START_TIMEOUT K_SECONDS(10)
+#define CONFIG_WIFI_CONNECT_RETRIES 5
 
 // --- State Management ---
 static struct net_if *ap_iface;
@@ -93,6 +94,32 @@ static int start_dhcp_server(void) {
   return ret;
 }
 
+int wifi_connect_with_retires(const char *wifi_ssid,
+                              const char *wifi_password) {
+  LOG_INF("Found Wi-Fi credentials for SSID: '%s'. Attempting to connect...",
+          wifi_ssid);
+
+  for (int retry = 0; retry < CONFIG_WIFI_CONNECT_RETRIES; retry++) {
+    LOG_INF("Wi-Fi connection attempt %d/%d", retry,
+            CONFIG_WIFI_CONNECT_RETRIES);
+
+    if (wifi_connect(wifi_ssid, wifi_password) == 0) {
+      LOG_INF("Wi-Fi connected successfully.");
+      return 0;
+    }
+
+    LOG_WRN("Wi-Fi connection attempt %d failed.", retry);
+    LOG_INF("Retrying in 60 seconds...");
+    k_sleep(K_SECONDS(60));
+  }
+
+  LOG_ERR(
+      "Failed to connect to Wi-Fi after %d attempts. Falling back to AP mode.",
+      CONFIG_WIFI_CONNECT_RETRIES);
+
+  return -1;
+}
+
 // --- Public API ---
 
 int wifi_manager_start_ap(void) {
@@ -162,7 +189,7 @@ int wifi_manager_start(void) {
 
   LOG_INF("Found Wi-Fi credentials for SSID: '%s'. Attempting to connect...",
           cfg->wifi_ssid);
-  if (wifi_connect(cfg->wifi_ssid, cfg->wifi_password) != 0) {
+  if (wifi_connect_with_retires(cfg->wifi_ssid, cfg->wifi_password) != 0) {
     LOG_ERR("Failed to connect to Wi-Fi. Falling back to AP mode.");
     return wifi_manager_start_ap();
   }
