@@ -6,14 +6,14 @@
         /* Most boards with a "BOOT" button use GPIO0 */
         /* boot-button = &gpio0; */
         /* sw0 = &boot_button_node; */
-/* Direct the standard alias to your board's built-in button_0 */
+        /* Direct the standard alias to your board's built-in button_0 */
         sw0 = &button0;
     };
 
     leds {
         compatible = "gpio-leds";
         led0: user_led  {
-            gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio0 4 GPIO_ACTIVE_HIGH>;
         };
     };
 
