@@ -135,7 +135,7 @@ python -m pip install pyserial esptool
 ```
 
 ```bash
-python -m esptool --chip esp32 erase_flash
+python -m esptool --chip esp32 erase-flash
 ```
 
 ```bash
