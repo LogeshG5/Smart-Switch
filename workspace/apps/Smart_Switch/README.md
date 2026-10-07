@@ -99,7 +99,17 @@ west update
 
 Navigate to your application directory and compile for your Espressif target (e.g., `esp32_devkitc_wroom`):
 
+Build using the build script from outside the container,
 ```bash
+cd workspace/apps/Smart_Switch
+docker exec -it zephyr-project /workspace/apps/Smart_Switch/build.sh
+```
+
+(or)
+
+Enter into docker shell & run build,
+```bash
+docker exec -it zephyr-project /bin/bash
 export ZEPHYR_BASE=/opt/toolchains/zephyr
 cd /workspace/apps/Smart_Switch &&
   west build -b yd_esp32/esp32/procpu --sysbuild . --pristine -- -DCONFIG_ESP32_USE_UNSUPPORTED_REVISION=y -DDTC_OVERLAY_FILE=boards/esp32_devkitc.overlay
