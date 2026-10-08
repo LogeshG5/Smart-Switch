@@ -99,7 +99,7 @@ int wifi_connect_with_retires(const char *wifi_ssid,
   LOG_INF("Found Wi-Fi credentials for SSID: '%s'. Attempting to connect...",
           wifi_ssid);
 
-  for (int retry = 0; retry < CONFIG_WIFI_CONNECT_RETRIES; retry++) {
+  for (int retry = 1; retry <= CONFIG_WIFI_CONNECT_RETRIES; retry++) {
     LOG_INF("Wi-Fi connection attempt %d/%d", retry,
             CONFIG_WIFI_CONNECT_RETRIES);
 
@@ -109,8 +109,8 @@ int wifi_connect_with_retires(const char *wifi_ssid,
     }
 
     LOG_WRN("Wi-Fi connection attempt %d failed.", retry);
-    LOG_INF("Retrying in 60 seconds...");
-    k_sleep(K_SECONDS(60));
+    LOG_INF("Retrying in 30 seconds...");
+    k_sleep(K_SECONDS(30));
   }
 
   LOG_ERR(
